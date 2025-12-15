@@ -47,6 +47,7 @@ This guide explains how to deploy Geospatial Consumption Zone (GCZ) as an **add-
    AZURE_TENANT_ID="<TENANT_ID_of_target_OSDU_deployment>"   # Entra ID tenant ID. Example: aaaabbbb-0000-cccc-1111-dddd2222eeee
    AZURE_CLIENT_ID="<CLIENT_ID_of_target_OSDU_deployment>"  # App Registration client ID. Example: 00001111-aaaa-2222-bbbb-3333cccc4444
    AZURE_CLIENT_SECRET="<CLIENT_SECRET_of_target_OSDU_deployment>"  # App Registration client secret. Example: Aa1Bb~2Cc3.-Dd4Ee5Ff6Gg7Hh8Ii9_Jj0Kk1Ll2
+   CLIENT_SECRET_B64=$(echo -n "$CLIENT_SECRET" | base64 -w0)
    AZURE_APP_ID="<CLIENT_ID_of_the_app-id_for_authentication>"
    AZURE_KEY_VAULT_URL="<YOUR_AZURE_KEYVAULT_URL>"
 
@@ -92,7 +93,8 @@ This guide explains how to deploy Geospatial Consumption Zone (GCZ) as an **add-
    $AZURE_DNS_NAME="<YOUR_OSDU_INSTANCE_FQDN>"  # Example: osdu-ship.msft-osdu-test.org
    $AZURE_TENANT_ID="<TENANT_ID_of_target_OSDU_deployment>"  # Entra ID tenant ID. Example: aaaabbbb-0000-cccc-1111-dddd2222eeee
    $AZURE_CLIENT_ID="<CLIENT_ID_of_target_OSDU_deployment>"  # App Registration client ID. Example: 00001111-aaaa-2222-bbbb-3333cccc4444
-   $AZURE_CLIENT_SECRET="<CLIENT_SECRET_of_target_OSDU_deployment>"  # App Registration client secret. Example: Aa1Bb~2Cc3.-Dd4Ee5Ff6Gg7Hh8Ii9_Jj0Kk1Ll2
+   $AZURE_CLIENT_SECRET="<CLIENT_SECRET_of_target_OSDU_deployment>"  # App Registration client secret. Example: Aa1Bb~2Cc3.-
+   $CLIENT_SECRET_B64=$(echo -n "$CLIENT_SECRET" | base64 -w0)
    $AZURE_APP_ID="<CLIENT_ID_of_the_app-id_for_authentication>"
    $AZURE_KEY_VAULT_URL="<YOUR_AZURE_KEYVAULT_URL>"
 
@@ -133,67 +135,58 @@ This guide explains how to deploy Geospatial Consumption Zone (GCZ) as an **add-
  ### [Unix Shell](#tab/unix-shell-1)
  
  ```bash
-   cat > osdu_gcz_custom_values.yaml << EOF
-   # GCZ Configuration - Azure Deployment
-
-   global:
-   ignite:
-    namespace: $NAMESPACE
-    name: ignite
+$ cat > osdu_gcz_custom_values.yaml << EOF
+# This file contains the essential configs for Azure GCZ helm chart deployment
+################################################################################
+# Specify the values for each service.
+#
+global:
+  provider:
+    entitlementsGroupsURL: "https://${AZURE_DNS_NAME}/api/entitlements/v2/groups"
     image:
-      repository: "{{ .Values.global.ignite.image.repository }}"
-      name: "{{ .Values.global.ignite.image.name }}"
-      tag: "{{ .Values.global.ignite.image.tag }}"
-    configuration:
-      gcz_ignite_namespace: "$GCZ_IGNITE_NAMESPACE"
-      gcz_ignite_service: "$GCZ_IGNITE_SERVICE"
-      gcz_persistence_enabled: true
-      gcz_persistence_folder: "/persistence/storage"
-      gcz_ignite_replicas: 3
-      gcz_ignite_cpu: "2"
-      gcz_ignite_memory: "4Gi"
-
-    provider:
-      namespace: $NAMESPACE
-    entitlementsGroupsURL: "https://$AZURE_DNS_NAME/api/entitlements/v2/groups"
-    image:
-      repository: "{{ .Values.global.provider.image.repository }}"
-      name: "{{ .Values.global.provider.image.name }}"
-      tag: "{{ .Values.global.provider.image.tag }}"
+      repository: "$AZURE_ACR"
+      name: "$GCZ_PROVIDER_IMAGE_NAME"
+      tag: "$GCZ_PROVIDER_IMAGE_TAG"
+    gcz_ignite_service: $GCZ_IGNITE_SERVICE
     service:
-      type: LoadBalancer
-    configuration:
-      privateNetwork: "$PRIVATE_NETWORK"
-      gcz_persistence_enabled: true
-      gcz_persistence_folder: "/persistence/storage"
-
-    transformer:
-    namespace: $NAMESPACE
-    image:
-      repository: "{{ .Values.global.transformer.image.repository }}"
-      name: "{{ .Values.global.transformer.image.name }}"
-      tag: "{{ .Values.global.transformer.image.tag }}"
-    service:
-      type: LoadBalancer
-    configuration:
+      port: 8083
+      targetPort: 8083
+    configuration:   # <-- moved here under provider
       privateNetwork: "$PRIVATE_NETWORK"
       dataPartitionId: $DATA_PARTITION_ID
       clientId: $AZURE_CLIENT_ID
       tenantId: $AZURE_TENANT_ID
       callbackURL: $CALLBACK_URL
-      scope: $SCOPE
-      searchQueryURL: "https://$AZURE_DNS_NAME/api/search/v2/query"
-      searchCursorURL: "https://$AZURE_DNS_NAME/api/search/v2/query_with_cursor"
-      schemaURL: "https://$AZURE_DNS_NAME/api/schema-service/v1/schema"
-      entitlementsURL: "https://$AZURE_DNS_NAME/api/entitlements/v2"
-      fileRetrievalURL: "https://$AZURE_DNS_NAME/api/dataset/v1/retrievalInstructions"
-      crsconvertorURL: "https://$AZURE_DNS_NAME/api/crs/converter/v3/convertTrajectory"
-      storageURL: "https://$AZURE_DNS_NAME/api/storage/v2/records"
+      keyvaultURL: $AZURE_KEY_VAULT_URL
+      searchQueryURL: "https://${AZURE_DNS_NAME}/api/search/v2/query"
+      searchCursorURL: "https://${AZURE_DNS_NAME}/api/search/v2/query_with_cursor"
+      schemaURL: "https://${AZURE_DNS_NAME}/api/schema-service/v1/schema"
+      entitlementsURL: "https://${AZURE_DNS_NAME}/api/entitlements/v2"
+      fileRetrievalURL: "https://${AZURE_DNS_NAME}/api/dataset/v1/retrievalInstructions"
+      crsconvertorURL: "https://${AZURE_DNS_NAME}/api/crs/converter/v3/convertTrajectory"
+      storageURL: "https://${AZURE_DNS_NAME}/api/storage/v2/records"
       partitionURL: http://partition.osdu-azure/api/partition/v1
-      clientSecret: $(echo "$AZURE_CLIENT_SECRET" | base64)
       gcz_persistence_enabled: true
       azureAppResourceId: $AZURE_APP_ID
-      gcz_ignite_service: $GCZ_IGNITE_SERVICE 
+      gcz_ignite_service: $GCZ_IGNITE_SERVICE
+   transformer:
+    image:
+      repository: "$AZURE_ACR"
+      name: "$GCZ_TRANSFORMER_IMAGE_NAME"
+      tag: "$GCZ_TRANSFORMER_IMAGE_TAG"
+    serviceAccount: "osdu-gcz-service-gridgain"
+    service:
+      port: 8080
+      targetPort: 8080
+    configuration:
+      secretName: gcz-client-secret
+
+  istio:
+    enabled: $ISTIO_ENABLED
+    gateways:
+      - istio-system/$ISTIO_GATEWAY_NAME
+    cors: {}
+    dns_host: ${ISTIO_GCZ_DNS_HOST}
 EOF
 ```
  ### [Windows PowerShell](#tab/windows-powershell-1)
@@ -201,7 +194,6 @@ EOF
    ```powershell
   @"
   # GCZ Configuration - Azure Deployment
-
 global:
   ignite:
     namespace: $NAMESPACE
@@ -375,48 +367,56 @@ global:
    helm dependency build
    ```
 
-11. Deploy the GCZ HELM chart:
+11. Create the secret in aks:
 
    ```bash
-   helm upgrade -i "$CHART" . -n "$NAMESPACE" -f osdu_gcz_custom_values.yaml \
-     --set-file global.provider.configLoaderJs="../../../../gcz-provider/gcz-provider-core/config/configLoader.js"
+   kubectl create secret generic client-secret -n ignite \
+  --from-literal=clientSecret="$CLIENT_SECRET"
    ```
 
-12. Verify the deployment:
+12. Deploy the GCZ HELM chart:
+
+   ```bash
+  helm upgrade -i "$CHART" . -n ignite \
+  -f osdu_gcz_custom_values.yaml \
+  --set-string global.transformer.configuration.clientSecret="$CLIENT_SECRET_B64"
+   ```
+
+13. Verify the deployment:
 
    ```bash
    kubectl get pods -n $NAMESPACE
    ```
 
-   Now you should see the pods for the `ignite`, `provider`, and `transformer` services.
+   Now you should see the pods for the `ignite`, `provider`, gridgain, and `transformer` services.
 
-13. Next get note the External IPs for the `provider` and `transformer` services.
+14. Next get note the External IPs for the `provider` and `transformer` services.
 
    ```bash
    kubectl get service -n $NAMESPACE
    ```
    
-14. Test the gcz-provider endpoint by port forwarding
+15. Test the gcz-provider endpoint by port forwarding
 
    ```bash
    kubectl port-forward -n $NAMESPACE service/gcz-provider 8083:8083
    curl "http://localhost:8083/ignite-provider/FeatureServer/layers/info"   
    ```
    
-15. If you encounter issues with the gcz-provider endpoint, try restarting the deployment
+16. If you encounter issues with the gcz-provider endpoint, try restarting the deployment
 
    ```bash
    kubectl rollout restart deployment gcz-provider -n $NAMESPACE
    ```
    
-16. Test the gcz-transformer endpoint by port forwarding
+17. Test the gcz-transformer endpoint by port forwarding
 
    ```bash
    kubectl port-forward -n $NAMESPACE service/gcz-transformer 8080:8080
    curl "http://localhost:8080/gcz/transformer/admin/v3/api-docs"
    ```
    
-17. If you encounter issues with the gcz-transformer endpoint, try restarting the deployment
+18. If you encounter issues with the gcz-transformer endpoint, try restarting the deployment
 
    ```bash
    kubectl rollout restart deployment gcz-transformer -n $NAMESPACE
