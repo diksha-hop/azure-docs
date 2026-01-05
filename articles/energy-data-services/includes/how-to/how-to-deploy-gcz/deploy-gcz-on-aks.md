@@ -108,6 +108,15 @@ This guide explains how to deploy Geospatial Consumption Zone (GCZ) as an **add-
    $GCZ_PROVIDER_IMAGE_TAG="0.28.2"
    $GCZ_TRANSFORMER_IMAGE_NAME="geospatial-transformer"
    $GCZ_TRANSFORMER_IMAGE_TAG="0.28.2"
+   PROVIDER_IMAGE_REPO=myregistry.azurecr.io/provider
+   PROVIDER_IMAGE_NAME=gcz-provider
+   PROVIDER_IMAGE_TAG=v1.0.0
+   IGNITE_IMAGE_REPO=myregistry.azurecr.io/gridgain
+   IGNITE_IMAGE_NAME=ignite
+   IGNITE_IMAGE_TAG=8.9.11
+   TRANSFORMER_IMAGE_REPO=myregistry.azurecr.io/transformer
+   TRANSFORMER_IMAGE_NAME=gcz-transformer
+   TRANSFORMER_IMAGE_TAG=v1.0.0
 
    # Istio Configuration (Enable ONLY if Istio exists on AKS)
    $ISTIO_ENABLED="false"
@@ -206,6 +215,7 @@ global:
     dns_host: ${ISTIO_GCZ_DNS_HOST}
 EOF
 ```
+
  ### [Windows PowerShell](#tab/windows-powershell-1)
  
    ```powershell
