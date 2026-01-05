@@ -223,6 +223,7 @@ export SCOPE="" # Scope of the ADME instance, i.e. "6ee7e0d6-0641-4b29-a283-541c
 export GRAPH_ENDPOINT="https://graph.microsoft.com/v1.0/" # Microsoft Graph API endpoint
 export APPINSIGHTS_INSTRUMENTATIONKEY="" # Optional. Application Insights instrumentation key
 export OSDU_CONNECTOR_API_ENDPOINT="" # Optional. API endpoint of the OSDU Connector API
+export REDIRECT_URI="" # this is your static website you can find in your storage account example https://<storage account name>.z21.web.core.windows.net/"
 
 
 jq \
@@ -297,14 +298,14 @@ Replace the values according to the explanation.
 
 1. Build the web UI.
     ```bash
-    ng build
+    ng build --configuration=azure-prod
     ```
 
 1. Upload the build to Storage Account.
     ```azurecli
     az storage blob upload-batch \
         --account-name $WEBSITE_NAME \
-        --source ./dist/OSDUApp \
+        --source ./dist/OSDUApp/browser/ \
         --destination '$web' \
         --overwrite
     ```
